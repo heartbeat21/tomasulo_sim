@@ -20,24 +20,36 @@ The simulator is designed for educational purposes, allowing users to explore ho
 ## Project Structure
 
 tomasulo_simulator/
-├── build/                  # Compiled binaries and object files
+├── build/
 ├── src/
-│   ├── decoder.cpp         # Instruction decoder (used by simulator)
-│   ├── instruction.cpp     # Instruction class implementation
-│   ├── instruction.h       # Instruction enums and definitions
-│   ├── loader.cpp          # Binary (.bin) file loader
-│   ├── main.cpp            # Simulator entry point
-│   ├── tomasulo_sim.cpp    # Core Tomasulo algorithm logic
-│   ├── tomasulo_sim.h      # TomasuloSim class declaration
-│   └── translator.cpp      # Standalone disassembler: .bin → human-readable RISC-V asm
+│   ├── decoder.cpp
+│   ├── instruction.cpp
+│   ├── instruction.h
+│   ├── loader.cpp
+│   ├── main.cpp
+│   ├── tomasulo_sim.cpp
+│   ├── tomasulo_sim.h
+│   └── translator.cpp
 ├── tests/
-│   ├── bin/                # Generated outputs: .bin (raw code), .dis (GCC disasm)
-│   ├── src/                # Source files for test cases (restricted C)
-│   ├── build.sh            # Compiles .c → .bin/.dis using RISC-V GCC toolchain
-│   ├── link.ld             # Linker script (code starts at 0x0)
-│   ├── generator.sh        # Generates test .c files
-│   └── makefile            # Build system for simulator
-└── README.md               # This documentation file
+│   ├── bin/ 
+│   ├── src/ 
+│   ├── build.sh
+│   ├── link.ld 
+│   ├── generator.sh 
+│   └── makefile 
+└── README.md
+
+> **Directory and file descriptions:**
+> - `build/`: Compiled binaries and object files  
+> - `src/`: Source code of the simulator  
+>   - `translator.cpp`: Standalone disassembler that converts `.bin` to human-readable RISC-V assembly  
+> - `tests/`: Test suite and generation scripts  
+>   - `bin/`: Generated binary outputs (`.bin`, `.dis`)  
+>   - `src/`: Auto-generated C test programs  
+>   - `build.sh`: Compiles C files to raw binary using RISC-V GCC toolchain  
+>   - `generator.sh`: Generates synthetic C test cases  
+> - `README.md`: This documentation file
+
 
 > Note:
 > - `build.sh` uses the official RISC-V GCC toolchain to produce correct .bin files.
