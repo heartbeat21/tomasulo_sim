@@ -1,0 +1,18 @@
+
+/mnt/e/desktop/高体/tomasulo_simulator/tests/bin/load_use.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	ff010113          	add	sp,sp,-16
+   4:	00813423          	sd	s0,8(sp)
+   8:	01010413          	add	s0,sp,16
+   c:	03003703          	ld	a4,48(zero) # 30 <val>
+  10:	02e03c23          	sd	a4,56(zero) # 38 <tmp>
+  14:	03803703          	ld	a4,56(zero) # 38 <tmp>
+  18:	04e03023          	sd	a4,64(zero) # 40 <result>
+  1c:	00000013          	nop
+  20:	00813403          	ld	s0,8(sp)
+  24:	01010113          	add	sp,sp,16
+  28:	00008067          	ret

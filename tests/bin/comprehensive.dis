@@ -1,0 +1,80 @@
+
+/mnt/e/desktop/高体/tomasulo_simulator/tests/bin/comprehensive.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	f8010113          	add	sp,sp,-128
+   4:	06813c23          	sd	s0,120(sp)
+   8:	08010413          	add	s0,sp,128
+   c:	12803703          	ld	a4,296(zero) # 128 <int_a>
+  10:	13003783          	ld	a5,304(zero) # 130 <int_b>
+  14:	00f707b3          	add	a5,a4,a5
+  18:	fef43423          	sd	a5,-24(s0)
+  1c:	12803703          	ld	a4,296(zero) # 128 <int_a>
+  20:	13003783          	ld	a5,304(zero) # 130 <int_b>
+  24:	40f707b3          	sub	a5,a4,a5
+  28:	fef43023          	sd	a5,-32(s0)
+  2c:	12803703          	ld	a4,296(zero) # 128 <int_a>
+  30:	13003783          	ld	a5,304(zero) # 130 <int_b>
+  34:	02f707b3          	mul	a5,a4,a5
+  38:	fcf43c23          	sd	a5,-40(s0)
+  3c:	12803703          	ld	a4,296(zero) # 128 <int_a>
+  40:	13003783          	ld	a5,304(zero) # 130 <int_b>
+  44:	02f747b3          	div	a5,a4,a5
+  48:	fcf43823          	sd	a5,-48(s0)
+  4c:	12803703          	ld	a4,296(zero) # 128 <int_a>
+  50:	13003783          	ld	a5,304(zero) # 130 <int_b>
+  54:	02f767b3          	rem	a5,a4,a5
+  58:	fcf43423          	sd	a5,-56(s0)
+  5c:	fe843703          	ld	a4,-24(s0)
+  60:	fe043783          	ld	a5,-32(s0)
+  64:	00f70733          	add	a4,a4,a5
+  68:	fd843783          	ld	a5,-40(s0)
+  6c:	00f70733          	add	a4,a4,a5
+  70:	fd043783          	ld	a5,-48(s0)
+  74:	00f70733          	add	a4,a4,a5
+  78:	fc843783          	ld	a5,-56(s0)
+  7c:	00f70733          	add	a4,a4,a5
+  80:	14e03423          	sd	a4,328(zero) # 148 <int_c>
+  84:	13803707          	fld	fa4,312(zero) # 138 <fp_a>
+  88:	14003787          	fld	fa5,320(zero) # 140 <fp_b>
+  8c:	02f777d3          	fadd.d	fa5,fa4,fa5
+  90:	fcf43027          	fsd	fa5,-64(s0)
+  94:	13803707          	fld	fa4,312(zero) # 138 <fp_a>
+  98:	14003787          	fld	fa5,320(zero) # 140 <fp_b>
+  9c:	0af777d3          	fsub.d	fa5,fa4,fa5
+  a0:	faf43c27          	fsd	fa5,-72(s0)
+  a4:	13803707          	fld	fa4,312(zero) # 138 <fp_a>
+  a8:	14003787          	fld	fa5,320(zero) # 140 <fp_b>
+  ac:	12f777d3          	fmul.d	fa5,fa4,fa5
+  b0:	faf43827          	fsd	fa5,-80(s0)
+  b4:	13803707          	fld	fa4,312(zero) # 138 <fp_a>
+  b8:	14003787          	fld	fa5,320(zero) # 140 <fp_b>
+  bc:	1af777d3          	fdiv.d	fa5,fa4,fa5
+  c0:	faf43427          	fsd	fa5,-88(s0)
+  c4:	fc043707          	fld	fa4,-64(s0)
+  c8:	fb843787          	fld	fa5,-72(s0)
+  cc:	02f77753          	fadd.d	fa4,fa4,fa5
+  d0:	fb043787          	fld	fa5,-80(s0)
+  d4:	02f77753          	fadd.d	fa4,fa4,fa5
+  d8:	fa843787          	fld	fa5,-88(s0)
+  dc:	02f777d3          	fadd.d	fa5,fa4,fa5
+  e0:	14f03827          	fsd	fa5,336(zero) # 150 <fp_c>
+  e4:	02a00793          	li	a5,42
+  e8:	faf42223          	sw	a5,-92(s0)
+  ec:	fa442783          	lw	a5,-92(s0)
+  f0:	d20787d3          	fcvt.d.w	fa5,a5
+  f4:	f8f43c27          	fsd	fa5,-104(s0)
+  f8:	f9843787          	fld	fa5,-104(s0)
+  fc:	c20797d3          	fcvt.w.d	a5,fa5,rtz
+ 100:	f8f42a23          	sw	a5,-108(s0)
+ 104:	f9442783          	lw	a5,-108(s0)
+ 108:	f8f42823          	sw	a5,-112(s0)
+ 10c:	f9843787          	fld	fa5,-104(s0)
+ 110:	f8f43427          	fsd	fa5,-120(s0)
+ 114:	00000013          	nop
+ 118:	07813403          	ld	s0,120(sp)
+ 11c:	08010113          	add	sp,sp,128
+ 120:	00008067          	ret

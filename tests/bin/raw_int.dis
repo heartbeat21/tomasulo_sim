@@ -1,0 +1,22 @@
+
+/mnt/e/desktop/高体/tomasulo_simulator/tests/bin/raw_int.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	ff010113          	add	sp,sp,-16
+   4:	00813423          	sd	s0,8(sp)
+   8:	01010413          	add	s0,sp,16
+   c:	04003703          	ld	a4,64(zero) # 40 <x2>
+  10:	04803783          	ld	a5,72(zero) # 48 <x3>
+  14:	00f70733          	add	a4,a4,a5
+  18:	04e03c23          	sd	a4,88(zero) # 58 <x1>
+  1c:	05803703          	ld	a4,88(zero) # 58 <x1>
+  20:	05003783          	ld	a5,80(zero) # 50 <x5>
+  24:	00f70733          	add	a4,a4,a5
+  28:	06e03023          	sd	a4,96(zero) # 60 <x4>
+  2c:	00000013          	nop
+  30:	00813403          	ld	s0,8(sp)
+  34:	01010113          	add	sp,sp,16
+  38:	00008067          	ret

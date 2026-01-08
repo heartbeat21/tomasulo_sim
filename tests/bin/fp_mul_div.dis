@@ -1,0 +1,22 @@
+
+/mnt/e/desktop/高体/tomasulo_simulator/tests/bin/fp_mul_div.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	ff010113          	add	sp,sp,-16
+   4:	00813423          	sd	s0,8(sp)
+   8:	01010413          	add	s0,sp,16
+   c:	04003707          	fld	fa4,64(zero) # 40 <x>
+  10:	04803787          	fld	fa5,72(zero) # 48 <y>
+  14:	12f777d3          	fmul.d	fa5,fa4,fa5
+  18:	04f03c27          	fsd	fa5,88(zero) # 58 <temp>
+  1c:	05803707          	fld	fa4,88(zero) # 58 <temp>
+  20:	05003787          	fld	fa5,80(zero) # 50 <z>
+  24:	1af777d3          	fdiv.d	fa5,fa4,fa5
+  28:	06f03027          	fsd	fa5,96(zero) # 60 <result>
+  2c:	00000013          	nop
+  30:	00813403          	ld	s0,8(sp)
+  34:	01010113          	add	sp,sp,16
+  38:	00008067          	ret

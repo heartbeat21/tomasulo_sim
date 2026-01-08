@@ -1,0 +1,22 @@
+
+/mnt/e/desktop/高体/tomasulo_simulator/tests/bin/waw_elimination.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	ff010113          	add	sp,sp,-16
+   4:	00813423          	sd	s0,8(sp)
+   8:	01010413          	add	s0,sp,16
+   c:	04003703          	ld	a4,64(zero) # 40 <slow_input1>
+  10:	04803783          	ld	a5,72(zero) # 48 <slow_input2>
+  14:	02f70733          	mul	a4,a4,a5
+  18:	06e03023          	sd	a4,96(zero) # 60 <result>
+  1c:	05003703          	ld	a4,80(zero) # 50 <fast_input1>
+  20:	05803783          	ld	a5,88(zero) # 58 <fast_input2>
+  24:	00f70733          	add	a4,a4,a5
+  28:	06e03023          	sd	a4,96(zero) # 60 <result>
+  2c:	00000013          	nop
+  30:	00813403          	ld	s0,8(sp)
+  34:	01010113          	add	sp,sp,16
+  38:	00008067          	ret

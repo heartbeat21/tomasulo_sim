@@ -1,0 +1,38 @@
+
+/mnt/e/desktop/高体/tomasulo_simulator/tests/bin/complex_pipeline.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <_start>:
+   0:	ff010113          	add	sp,sp,-16
+   4:	00813423          	sd	s0,8(sp)
+   8:	01010413          	add	s0,sp,16
+   c:	08003703          	ld	a4,128(zero) # 80 <g_int_a>
+  10:	08803783          	ld	a5,136(zero) # 88 <g_int_b>
+  14:	00f70733          	add	a4,a4,a5
+  18:	0ae03c23          	sd	a4,184(zero) # b8 <r1>
+  1c:	0b803703          	ld	a4,184(zero) # b8 <r1>
+  20:	09003783          	ld	a5,144(zero) # 90 <g_int_c>
+  24:	02f70733          	mul	a4,a4,a5
+  28:	0ce03023          	sd	a4,192(zero) # c0 <r2>
+  2c:	0c003703          	ld	a4,192(zero) # c0 <r2>
+  30:	09803783          	ld	a5,152(zero) # 98 <g_int_d>
+  34:	00f70733          	add	a4,a4,a5
+  38:	0ce03423          	sd	a4,200(zero) # c8 <r3>
+  3c:	0a003707          	fld	fa4,160(zero) # a0 <g_fp_x>
+  40:	0a803787          	fld	fa5,168(zero) # a8 <g_fp_y>
+  44:	1af777d3          	fdiv.d	fa5,fa4,fa5
+  48:	0cf03827          	fsd	fa5,208(zero) # d0 <f1>
+  4c:	0d003707          	fld	fa4,208(zero) # d0 <f1>
+  50:	0b003787          	fld	fa5,176(zero) # b0 <g_fp_z>
+  54:	12f777d3          	fmul.d	fa5,fa4,fa5
+  58:	0cf03c27          	fsd	fa5,216(zero) # d8 <f2>
+  5c:	0a803707          	fld	fa4,168(zero) # a8 <g_fp_y>
+  60:	0b003787          	fld	fa5,176(zero) # b0 <g_fp_z>
+  64:	02f777d3          	fadd.d	fa5,fa4,fa5
+  68:	0ef03027          	fsd	fa5,224(zero) # e0 <f3>
+  6c:	00000013          	nop
+  70:	00813403          	ld	s0,8(sp)
+  74:	01010113          	add	sp,sp,16
+  78:	00008067          	ret
