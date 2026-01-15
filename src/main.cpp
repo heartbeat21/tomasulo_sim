@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<double> input_data = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
     uint64_t base_addr = 0x1000;
-    uint64_t start_addr = base_addr + input_data.size() * sizeof(double); // 0x1040
+    uint64_t start_addr = base_addr + (input_data.size() - 1) * sizeof(double); // 0x1040
     uint64_t end_addr = base_addr; // 0x1000
 
     // 构建内存初始化数据

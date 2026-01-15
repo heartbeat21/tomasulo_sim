@@ -736,6 +736,7 @@ void commit_head_of_rob() {
             memory_int[addr] = to_int(data);
         } else if (entry.op == OpType::FSD) {
             memory_fp[addr] = to_fp(data);
+            std::cout << " { " << addr << " : " << memory_fp[addr] << " }\t";
         }
 
         // 标记 LSQ 条目为无效
@@ -1021,4 +1022,15 @@ void simulate(const std::vector<Instruction>& instructions,
             print_cycle_state(cycle);
         cycle++;
     }
+
+    std::cout << " {addr : val}\n";
+    std::cout<<"===================  memory int data =====================\n";
+    for (const auto& [addr, val] : memory_int) {
+        std::cout << " { " << addr << " : " << val << " }\t";
+    }
+    std::cout<<"\n===================  memory fp data =====================\n";
+    for (const auto& [addr, val] : memory_fp) {
+        std::cout << " { " << addr << " : " << val << " }\t";
+    }
+    std::cout<<std::endl;
 }
