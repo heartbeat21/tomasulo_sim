@@ -16,7 +16,7 @@ enum class OpType {
     FCVT_D_W, FCVT_W_D,
     LD, SD, LW, SW, FLD, FSD,
     LUI, AUIPC,
-    JALR, EBREAK, UNKNOWN
+    JALR, BNE, EBREAK, UNKNOWN
 };
 
 struct Instruction {

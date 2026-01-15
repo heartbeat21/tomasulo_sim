@@ -171,7 +171,10 @@ static const std::unordered_map<OpType, FormatFn>& get_formatters() {
         }},
         {OpType::JALR, [](const Instruction& i) { 
             return "jalr " + std::string(reg_name_int(i.rd)) + ", " + reg_name_int(i.rs1) + ", " + std::to_string(i.imm); 
-        }}
+        }},
+        {OpType::BNE, [](const Instruction& i) { 
+            return "bne " + std::string(reg_name_int(i.rs1)) + ", " + reg_name_int(i.rs2) + ", " + std::to_string(i.imm); 
+        }},
     };
     return formatters;
 }

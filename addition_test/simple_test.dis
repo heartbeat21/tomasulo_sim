@@ -1,0 +1,12 @@
+
+./././addition_test/simple_test.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <LOOP>:
+   0:	0002b007          	fld	f0,0(x5)
+   4:	12207253          	fmul.d	f4,f0,f2
+   8:	0042b027          	fsd	f4,0(x5)
+   c:	ff828293          	add	x5,x5,-8
+  10:	fe6298e3          	bne	x5,x6,0 <LOOP>

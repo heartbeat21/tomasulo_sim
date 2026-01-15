@@ -37,6 +37,7 @@ Instruction decode_instruction(uint32_t inst_word) {
     const uint32_t OP_LUI    = 0x37;
     const uint32_t OP_AUIPC  = 0x17;
     const uint32_t OP_JALR   = 0x67;
+    const uint32_t OP_BRANCH = 0x63;
     const uint32_t OP_MISC_MEM = 0x73;
 
     if (opcode == OP_LOAD) {
@@ -175,6 +176,24 @@ Instruction decode_instruction(uint32_t inst_word) {
         inst.rd = get_rd(inst_word);
         inst.rs1 = get_rs1(inst_word);
         inst.imm = decode_imm_i(inst_word);
+    } else if (opcode == OP_BRANCH) {
+        uint32_t funct3 = get_funct3(inst_word);
+        inst.rs1 = get_rs1(inst_word);
+        inst.rs2 = get_rs2(inst_word);
+        
+        // Decode B-type immediate
+        uint32_t imm = ((inst_word >> 31) & 1) << 12 |
+                   ((inst_word >> 7) & 1) << 11 |
+                   ((inst_word >> 25) & 0x3F) << 5 |
+                   ((inst_word >> 8) & 0xF) << 1;
+        // Sign-extend from 13 bits to 32 bits
+        inst.imm = static_cast<int32_t>(imm << 19) >> 19;
+
+        if (funct3 == 0x1) { // BNE
+            inst.op = OpType::BNE;
+        } else {
+            inst.op = OpType::UNKNOWN; // 只处理 BNE
+        }
     }
     else if (opcode == OP_MISC_MEM && (inst_word & 0x000FFFFF) == 0x00000073) {
         if (get_funct3(inst_word) == 0 && get_rs1(inst_word) == 0 && get_rd(inst_word) == 0) {

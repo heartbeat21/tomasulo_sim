@@ -44,6 +44,7 @@ int lsq_count = 0;
 
 std::vector<Instruction> instruction_queue;
 size_t next_fetch_idx = 0;
+size_t next_fetch_branch = 0;
 
 std::string get_rs_id(const std::string& type, int idx) {
     return type + std::to_string(idx);
@@ -58,6 +59,7 @@ bool is_alu_op(OpType op) {
         case OpType::SLTI: case OpType::SLTIU:
         case OpType::SLL: case OpType::SRL: case OpType::SRA:
         case OpType::LUI: case OpType::AUIPC: case OpType::JALR:
+        case OpType::BNE:
             return true;
         default: return false;
     }
@@ -166,6 +168,10 @@ static OperandValue execute_alu_op(const ReservationStation& rs) {
         case OpType::JALR: {
             return OperandValue(static_cast<uint64_t>(rs.A)); // 返回地址 = PC+4
         }
+        case OpType::BNE: {
+            // BNE: if (rs1 != rs2) then branch (result is 1), else 0.
+            return OperandValue((j != k) ? 1ULL : 0ULL);
+        }
         default:
             throw std::runtime_error("Unsupported ALU op");
     }
@@ -235,6 +241,21 @@ static OperandValue execute_fp_mul_op(const ReservationStation& rs) {
     throw std::runtime_error("Unsupported FP mul/div op");
 }
 
+static int get_rob_index(const std::string& tag) {
+    if (tag.empty()) return -1;
+    return std::stoi(tag.substr(3));
+}
+
+void ReservationStation::clear() {
+    busy = false;
+    op = OpType::UNKNOWN;
+    Qj = "";
+    Qk = "";
+    dest = std::monostate{};
+    ROB_idx = -1;
+    A = 0;
+}
+
 void FunctionalUnit::start(OpType _op, const OperandValue& a, const OperandValue& b, 
                int _rob_idx, const std::string& _rs_type, int _rs_idx) {
         op = _op;
@@ -257,6 +278,18 @@ void FunctionalUnit::clear() {
     rs_idx = -1;
 }
 
+void ROBEntry::clear() {
+    busy = false;
+    op = OpType::UNKNOWN;
+    dest = std::monostate{};
+    is_load = false;
+    is_store = false;
+    result;
+    state = InstructionState::ISSUED;
+
+    lsq_idx = -1;
+}
+
 OperandValue FunctionalUnit::compute_result() const {
         ReservationStation fake_rs;
         fake_rs.op = op;
@@ -273,6 +306,7 @@ OperandValue FunctionalUnit::compute_result() const {
 
 bool issue_instruction(const Instruction& instr) {
     if (rob_count >= ROB_SIZE) return false;
+    std::cout<< instr.toString() <<std::endl;
 
     int rob_idx = rob_tail;
     rob[rob_idx] = ROBEntry{
@@ -282,7 +316,8 @@ bool issue_instruction(const Instruction& instr) {
         .is_load = is_load_op(instr.op),
         .is_store = is_store_op(instr.op),
         .state = InstructionState::ISSUED,
-        .lsq_idx = -1
+        .lsq_idx = -1,
+        .instr = instr
     };
 
     bool issued = false;
@@ -311,6 +346,7 @@ bool issue_instruction(const Instruction& instr) {
         if (target_rs) {
             for (int i = 0; i < rs_size; ++i) {
                 if (!target_rs[i].busy) {
+                    target_rs[i].clear();
                     target_rs[i].busy = true;
                     target_rs[i].op = instr.op;
                     target_rs[i].ROB_idx = rob_idx;
@@ -320,16 +356,28 @@ bool issue_instruction(const Instruction& instr) {
                     if (instr.rs1 >= 0) {
                         IntReg src_reg(instr.rs1);
                         if (regs_int_status[src_reg.idx] == "") {
+                            std::cout << " Vj " << regs_int[src_reg.idx];
                             target_rs[i].Vj = OperandValue(regs_int[src_reg.idx]);
                         } else {
-                            target_rs[i].Qj = regs_int_status[src_reg.idx];
+                            std::cout << " Qj " << regs_int_status[src_reg.idx];
+                            int dep_rob_idx = get_rob_index(regs_int_status[src_reg.idx]);
+                            if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                                target_rs[i].Vj = rob[dep_rob_idx].result;
+                            } else {
+                                target_rs[i].Qj = regs_int_status[src_reg.idx];
+                            }
                         }
                     } else if (instr.fs1 >= 0) {
                         FpReg src_reg(instr.fs1);
                         if (regs_fp_status[src_reg.idx] == "") {
                             target_rs[i].Vj = OperandValue(regs_fp[src_reg.idx]);
                         } else {
-                            target_rs[i].Qj = regs_fp_status[src_reg.idx];
+                            int dep_rob_idx = get_rob_index(regs_fp_status[src_reg.idx]);
+                            if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                                target_rs[i].Vj = rob[dep_rob_idx].result;
+                            } else {
+                                target_rs[i].Qj = regs_fp_status[src_reg.idx];
+                            }
                         }
                     }
 
@@ -339,14 +387,24 @@ bool issue_instruction(const Instruction& instr) {
                         if (regs_int_status[src_reg.idx] == "") {
                             target_rs[i].Vk = OperandValue(regs_int[src_reg.idx]);
                         } else {
-                            target_rs[i].Qk = regs_int_status[src_reg.idx];
+                            int dep_rob_idx = get_rob_index(regs_int_status[src_reg.idx]);
+                            if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                                target_rs[i].Vk = rob[dep_rob_idx].result;
+                            } else {
+                                target_rs[i].Qk = regs_int_status[src_reg.idx];
+                            }
                         }
                     } else if (instr.fs2 >= 0) {
                         FpReg src_reg(instr.fs2);
                         if (regs_fp_status[src_reg.idx] == "") {
                             target_rs[i].Vk = OperandValue(regs_fp[src_reg.idx]);
                         } else {
-                            target_rs[i].Qk = regs_fp_status[src_reg.idx];
+                            int dep_rob_idx = get_rob_index(regs_fp_status[src_reg.idx]);
+                            if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                                target_rs[i].Vk = rob[dep_rob_idx].result;
+                            } else {
+                                target_rs[i].Qk = regs_fp_status[src_reg.idx];
+                            }
                         }
                     } else {
                         // I-type: use immediate
@@ -393,14 +451,24 @@ bool issue_instruction(const Instruction& instr) {
             if (regs_int_status[src_reg.idx] == "") {
                 rs.Vj = OperandValue(regs_int[src_reg.idx]);
             } else {
-                rs.Qj = regs_int_status[src_reg.idx];
+                int dep_rob_idx = get_rob_index(regs_int_status[src_reg.idx]);
+                if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                    rs.Vj = rob[dep_rob_idx].result;
+                } else {
+                    rs.Qj = regs_int_status[src_reg.idx];
+                }
             }
         } else if (instr.fs1 >= 0) {
             FpReg src_reg(instr.fs1);
             if (regs_fp_status[src_reg.idx] == "") {
                 rs.Vj = OperandValue(regs_fp[src_reg.idx]);
             } else {
-                rs.Qj = regs_fp_status[src_reg.idx];
+                int dep_rob_idx = get_rob_index(regs_fp_status[src_reg.idx]);
+                if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                    rs.Vj = rob[dep_rob_idx].result;
+                } else {
+                    rs.Qj = regs_fp_status[src_reg.idx];
+                }
             }
         }
 
@@ -441,14 +509,24 @@ bool issue_instruction(const Instruction& instr) {
             if (regs_int_status[src_reg.idx] == "") {
                 rs.Vj = OperandValue(regs_int[src_reg.idx]);
             } else {
-                rs.Qj = regs_int_status[src_reg.idx];
+                int dep_rob_idx = get_rob_index(regs_int_status[src_reg.idx]);
+                if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                    rs.Vj = rob[dep_rob_idx].result;
+                } else {
+                    rs.Qj = regs_int_status[src_reg.idx];
+                }
             }
         } else if (instr.fs1 >= 0) {
             FpReg src_reg(instr.fs1);
             if (regs_fp_status[src_reg.idx] == "") {
                 rs.Vj = OperandValue(regs_fp[src_reg.idx]);
             } else {
-                rs.Qj = regs_fp_status[src_reg.idx];
+                int dep_rob_idx = get_rob_index(regs_fp_status[src_reg.idx]);
+                if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                    rs.Vj = rob[dep_rob_idx].result;
+                } else {
+                    rs.Qj = regs_fp_status[src_reg.idx];
+                }
             }
         }
 
@@ -457,14 +535,24 @@ bool issue_instruction(const Instruction& instr) {
             if (regs_int_status[data_reg.idx] == "") {
                 rs.Vk = OperandValue(regs_int[data_reg.idx]);
             } else {
-                rs.Qk = regs_int_status[data_reg.idx];
+                int dep_rob_idx = get_rob_index(regs_int_status[data_reg.idx]);
+                if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                    rs.Vk = rob[dep_rob_idx].result;
+                } else {
+                    rs.Qk = regs_int_status[data_reg.idx];
+                }
             }
         } else if (instr.fs2 >= 0) {
             FpReg data_reg(instr.fs2);
             if (regs_fp_status[data_reg.idx] == "") {
                 rs.Vk = OperandValue(regs_fp[data_reg.idx]);
             } else {
-                rs.Qk = regs_fp_status[data_reg.idx];
+                int dep_rob_idx = get_rob_index(regs_fp_status[data_reg.idx]);
+                if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
+                    rs.Vk = rob[dep_rob_idx].result;
+                } else {
+                    rs.Qk = regs_fp_status[data_reg.idx];
+                }
             }
         }
 
@@ -492,6 +580,38 @@ bool issue_instruction(const Instruction& instr) {
 
 void executeFU() {
     cdb_list.clear();
+    // --- 启动新操作 ---
+    auto try_launch_to_fu = [&](auto& fu_array, const std::string& rs_type,
+                                int rs_size, ReservationStation* rs_array) {
+        for (int i = 0; i < rs_size; ++i) {
+            auto& rs = rs_array[i];
+            if (!rs.busy) continue;
+            if (!rs.Qj.empty()) continue;
+            if (rs_type != "LOAD" && (!rs.Qk.empty() || !rs.Vk)) continue;
+
+            if (rob[rs.ROB_idx].state >= InstructionState::EXECUTING) continue;
+
+            // 找一个空闲 FU
+            for (auto& fu : fu_array) {
+                if (!fu.busy) {
+                    OperandValue v1 = *rs.Vj;
+                    OperandValue v2 = (rs_type == "LOAD") ? OperandValue(0.0) : *rs.Vk;
+                    fu.clear();
+                    fu.start(rs.op, v1, v2, rs.ROB_idx, rs_type, i);
+                    rob[rs.ROB_idx].state = InstructionState::EXECUTING;
+                    break;
+                }
+            }
+        }
+    };
+
+    try_launch_to_fu(int_alu_fus, "INTALU", NUM_INTALU_RS, intalu_rs);
+    try_launch_to_fu(int_muldiv_fu, "MULDIV", NUM_MULDIV_RS, muldiv_rs);
+    try_launch_to_fu(load_fus, "LOAD", NUM_LOAD_RS, load_rs);
+    try_launch_to_fu(store_fus, "STORE", NUM_STORE_RS, store_rs);
+    try_launch_to_fu(fp_add_fus, "FPADD", NUM_FPADD_RS, fpadd_rs);
+    try_launch_to_fu(fp_mul_fus, "FPMUL", NUM_FPMUL_RS, fpmul_rs);
+    try_launch_to_fu(fp_div_fu, "FPDIV", NUM_FPDIV_RS, fpdiv_rs);
 
     auto process_fu_array = [&](auto& fu_array, const std::string& rs_type_base) {
         for (auto& fu : fu_array) {
@@ -555,10 +675,27 @@ void executeFU() {
                     std::string rob_tag = "ROB" + std::to_string(fu.rob_idx);
                     cdb_list.push_back(CDB{rob_tag, result});
                     rob[fu.rob_idx].state = InstructionState::EXECUTED;
+
+                    if (rs->op == OpType::BNE) {
+                        // BNE: 跳转偏移 = imm / 2 (RISC-V 规范)
+                        uint64_t sign = to_int(result);
+                        if(sign == 1)
+                            next_fetch_branch = next_fetch_idx - 1 + int64_t(rs->A / 4);
+
+                        std::cout<<"sign="<<sign << "\t pc=" << int64_t(rs->A) << "\tbranch\t" << next_fetch_branch <<std::endl;
+                    }
+                    else if (rs->op == OpType::JALR) {
+                        // JALR: 目标地址 = rs1 + imm
+                        uint64_t rs1_val = to_int(result);
+                        uint64_t target_addr = rs1_val + rs->A;
+                        next_fetch_branch = target_addr / 4; // 转换为指令索引
+                    }
                 }
 
                 // 释放 RS
-                if (rs) rs->busy = false;
+                if (rs) {
+                    rs->busy = false;
+                }
 
                 // 释放 FU
                 fu.busy = false;
@@ -574,38 +711,6 @@ void executeFU() {
     process_fu_array(fp_add_fus, "FPADD");
     process_fu_array(fp_mul_fus, "FPMUL");
     process_fu_array(fp_div_fu, "FPDIV");
-
-    // --- 启动新操作 ---
-    auto try_launch_to_fu = [&](auto& fu_array, const std::string& rs_type,
-                                int rs_size, ReservationStation* rs_array) {
-        for (int i = 0; i < rs_size; ++i) {
-            auto& rs = rs_array[i];
-            if (!rs.busy) continue;
-            if (!rs.Qj.empty() || !rs.Vj) continue;
-            if (rs_type != "LOAD" && (!rs.Qk.empty() || !rs.Vk)) continue;
-
-            if (rob[rs.ROB_idx].state >= InstructionState::EXECUTING) continue;
-
-            // 找一个空闲 FU
-            for (auto& fu : fu_array) {
-                if (!fu.busy) {
-                    OperandValue v1 = *rs.Vj;
-                    OperandValue v2 = (rs_type == "LOAD") ? OperandValue(0.0) : *rs.Vk;
-                    fu.start(rs.op, v1, v2, rs.ROB_idx, rs_type, i);
-                    rob[rs.ROB_idx].state = InstructionState::EXECUTING;
-                    break;
-                }
-            }
-        }
-    };
-
-    try_launch_to_fu(int_alu_fus, "INTALU", NUM_INTALU_RS, intalu_rs);
-    try_launch_to_fu(int_muldiv_fu, "MULDIV", NUM_MULDIV_RS, muldiv_rs);
-    try_launch_to_fu(load_fus, "LOAD", NUM_LOAD_RS, load_rs);
-    try_launch_to_fu(store_fus, "STORE", NUM_STORE_RS, store_rs);
-    try_launch_to_fu(fp_add_fus, "FPADD", NUM_FPADD_RS, fpadd_rs);
-    try_launch_to_fu(fp_mul_fus, "FPMUL", NUM_FPMUL_RS, fpmul_rs);
-    try_launch_to_fu(fp_div_fu, "FPDIV", NUM_FPDIV_RS, fpdiv_rs);
 }
 
 int times = 0;
@@ -737,6 +842,7 @@ void print_cycle_state(int cycle) {
         std::string state_str;
         switch (rob[i].state) {
             case InstructionState::ISSUED: state_str = "ISSUED"; break;
+            case InstructionState::EXECUTING: state_str = "EXECUTING"; break;
             case InstructionState::EXECUTED: state_str = "EXECUTED"; break;
             case InstructionState::COMMITTED: state_str = "COMMITTED"; break;
             default: state_str = "UNKNOWN";
@@ -750,19 +856,15 @@ void print_cycle_state(int cycle) {
         }, rob[i].dest);
 
         std::cout << "  ROB" << i << " : op=" << static_cast<int>(rob[i].op)
+                  << " instr="<< rob[i].instr.toString()
                   << " dest=" << dest_str
                   << " state=" << state_str
                   << " lsq_idx=" << rob[i].lsq_idx
                   << (rob[i].result.has_value() ? " [has result]" : "")
                   << "\n";
     }
-    if (!rob_printed_header) {
-        // 可选：显示 ROB 为空
-        // std::cout << "ROB: (all committed)\n";
-    }
-
+    
     // --- Print Register Status ---
-    // 这部分已经只打印非空项，无需修改
     std::cout << "\nInteger Register Status:\n";
     for (int i = 0; i < 32; ++i) {
         if (!regs_int_status[i].empty()) {
@@ -775,6 +877,19 @@ void print_cycle_state(int cycle) {
             std::cout << "  f" << i << " <- " << regs_fp_status[i] << "\n";
         }
     }
+    std::cout << "\nInteger Register value:\n";
+    for (int i = 0; i < 32; ++i) {
+        if (regs_int[i] != 0) {
+            std::cout << "  x" << i << " <- " << static_cast<int64_t>(regs_int[i]) << "\t";
+        }
+    }
+    std::cout << "\nFP Register value:\n";
+    for (int i = 0; i < 32; ++i) {
+        if (regs_fp[i] != 0.0) {
+            std::cout << "  f" << i << " <- " << static_cast<double>(regs_fp[i]) <<  "\t";
+        }
+    }
+    std::cout<<std::endl;
 
     // --- Print Reservation Stations ---
     // 已经只打印 busy 的，保持不变
@@ -825,7 +940,10 @@ void print_cycle_state(int cycle) {
     std::cout << "========================================\n\n";
 }
 
-void simulate(const std::vector<Instruction>& instructions, bool ENABLE_CYCLE_PRINT) {
+void simulate(const std::vector<Instruction>& instructions,
+    const MemoryInitData& mem_init,
+    const RegisterInitData& reg_init, 
+    bool ENABLE_CYCLE_PRINT) {
     // 初始化全局状态
     for (int i = 0; i < 32; ++i) {
         regs_int[i] = 0;
@@ -833,8 +951,27 @@ void simulate(const std::vector<Instruction>& instructions, bool ENABLE_CYCLE_PR
         regs_int_status[i] = "";
         regs_fp_status[i] = "";
     }
+    for (const auto& [idx, val] : reg_init.int_regs) {
+        if (idx >= 0 && idx < 32) {
+            if (idx == 0) continue;   // x0 is hardwired to 0
+            regs_int[idx] = val;
+        }
+    }
+    for (const auto& [idx, val] : reg_init.fp_regs) {
+        if (idx >= 0 && idx < 32) {
+            regs_fp[idx] = val;
+        }
+    }
+
     memory_int.clear();
     memory_fp.clear();
+
+    for (const auto& [addr, val] : mem_init.int_data) {
+        memory_int[addr] = val;
+    }
+    for (const auto& [addr, val] : mem_init.fp_data) {
+        memory_fp[addr] = val;
+    }
 
     // 清空保留站
     auto clear_rs_array = [](ReservationStation* arr, int size) {
@@ -885,15 +1022,25 @@ void simulate(const std::vector<Instruction>& instructions, bool ENABLE_CYCLE_PR
         commit_head_of_rob();
         // 2. Execute & Broadcast 阶段
         executeFU();
+
+        // 无分支延迟槽（执行后立即更新）
+        std::cout<<"next_fetch_branch="<<next_fetch_branch<<std::endl;
+        if(next_fetch_branch != next_fetch_idx) {
+            next_fetch_idx = next_fetch_branch;
+            std::cout << " pc=" << next_fetch_idx << std::endl;
+        }
         // 1. Issue 阶段：按序发射（这里简化为每周期 1 条）
         if (next_fetch_idx < instruction_queue.size()) {
+            std::cout<< instruction_queue[next_fetch_idx].toString() <<std::endl;
             if(issue_instruction(instruction_queue[next_fetch_idx]))
                 next_fetch_idx++;
         }
 
         CDB_broadcast();
+        next_fetch_branch = next_fetch_idx;
 
-        print_cycle_state(cycle);
+        if(ENABLE_CYCLE_PRINT)
+            print_cycle_state(cycle);
         cycle++;
     }
 }

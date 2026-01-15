@@ -84,6 +84,8 @@ struct ReservationStation {
 
     int ROB_idx = -1;
     int64_t A = 0;
+
+    void clear();
 };
 
 extern ReservationStation intalu_rs[NUM_INTALU_RS];
@@ -129,6 +131,10 @@ struct ROBEntry {
     InstructionState state = InstructionState::ISSUED;
 
     int lsq_idx = -1;
+    // debug
+    Instruction instr;
+
+    void clear();
 };
 
 extern ROBEntry rob[ROB_SIZE];
@@ -186,5 +192,17 @@ inline double to_fp(const OperandValue& v) {
     throw std::runtime_error("Expected double in OperandValue");
 }
 
-void simulate(const std::vector<Instruction>& instructions, bool ENABLE_CYCLE_PRINT = false);
+// memory and regs
+struct RegisterInitData {
+    std::vector<std::pair<int, uint64_t>> int_regs;   // {reg_idx, value}
+    std::vector<std::pair<int, double>> fp_regs;      // {reg_idx, value}
+};
+
+struct MemoryInitData {
+    std::vector<std::pair<uint64_t, uint64_t>> int_data;
+    std::vector<std::pair<uint64_t, double>> fp_data;
+};
+
+
+void simulate(const std::vector<Instruction>& instructions, const MemoryInitData& mem_init = {}, const RegisterInitData& reg_init = {}, bool ENABLE_CYCLE_PRINT = false);
 #endif
