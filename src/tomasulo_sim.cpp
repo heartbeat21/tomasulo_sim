@@ -306,7 +306,6 @@ OperandValue FunctionalUnit::compute_result() const {
 
 bool issue_instruction(const Instruction& instr) {
     if (rob_count >= ROB_SIZE) return false;
-    std::cout<< instr.toString() <<std::endl;
 
     int rob_idx = rob_tail;
     rob[rob_idx] = ROBEntry{
@@ -356,10 +355,8 @@ bool issue_instruction(const Instruction& instr) {
                     if (instr.rs1 >= 0) {
                         IntReg src_reg(instr.rs1);
                         if (regs_int_status[src_reg.idx] == "") {
-                            std::cout << " Vj " << regs_int[src_reg.idx];
                             target_rs[i].Vj = OperandValue(regs_int[src_reg.idx]);
                         } else {
-                            std::cout << " Qj " << regs_int_status[src_reg.idx];
                             int dep_rob_idx = get_rob_index(regs_int_status[src_reg.idx]);
                             if (dep_rob_idx >= 0 && rob[dep_rob_idx].state == InstructionState::EXECUTED) {
                                 target_rs[i].Vj = rob[dep_rob_idx].result;
@@ -681,8 +678,6 @@ void executeFU() {
                         uint64_t sign = to_int(result);
                         if(sign == 1)
                             next_fetch_branch = next_fetch_idx - 1 + int64_t(rs->A / 4);
-
-                        std::cout<<"sign="<<sign << "\t pc=" << int64_t(rs->A) << "\tbranch\t" << next_fetch_branch <<std::endl;
                     }
                     else if (rs->op == OpType::JALR) {
                         // JALR: 目标地址 = rs1 + imm
@@ -719,17 +714,6 @@ void commit_head_of_rob() {
     if (rob_count == 0) return;
     int idx = rob_head;
     ROBEntry& entry = rob[idx];
-
-    
-    if (entry.state != InstructionState::EXECUTED) {
-        times++;
-        if(times == 6)
-            std::cout<<"\n\n TO DEBUG\n\n";
-        if(times >= 16)
-        std::exit(1);
-        return;
-    }
-    times = 0;
 
     // 只有 EXECUTED 的指令才能提交（Load 在 execute 阶段已写 result）
     if (entry.state != InstructionState::EXECUTED) {
@@ -781,8 +765,6 @@ void commit_head_of_rob() {
             }, entry.dest);
         }
     }
-
-    std::cout<<int(entry.op)<<std::endl;
 
 release_rob:
     // 提交完成，释放 ROB 条目
@@ -1017,21 +999,17 @@ void simulate(const std::vector<Instruction>& instructions,
     int cycle = 0;
     // 模拟直到所有指令都取完且 ROB 为空
     while (next_fetch_idx < instruction_queue.size() || rob_count > 0) {
-        std::cout<<rob_count<<std::endl;
         // 3. Commit 阶段：提交 ROB 头部（按序提交）
         commit_head_of_rob();
         // 2. Execute & Broadcast 阶段
         executeFU();
 
         // 无分支延迟槽（执行后立即更新）
-        std::cout<<"next_fetch_branch="<<next_fetch_branch<<std::endl;
         if(next_fetch_branch != next_fetch_idx) {
             next_fetch_idx = next_fetch_branch;
-            std::cout << " pc=" << next_fetch_idx << std::endl;
         }
         // 1. Issue 阶段：按序发射（这里简化为每周期 1 条）
         if (next_fetch_idx < instruction_queue.size()) {
-            std::cout<< instruction_queue[next_fetch_idx].toString() <<std::endl;
             if(issue_instruction(instruction_queue[next_fetch_idx]))
                 next_fetch_idx++;
         }
